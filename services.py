@@ -1,25 +1,33 @@
 import subprocess
-from tabulate import tabulate
-import ast
+from base_service import BaseService, SpecialService
 
-def get_service_status():
-    try:
-        result = subprocess.run(['systemctl', 'list-units', '--no-legend', '--type=service', '--state=running'], capture_output=True,
-                                text=True, check=True)
-        output = result.stdout
-        if not output.strip():
-            return [["Нет запущенных сервисов."]]
-        lines = output.strip().split('\n')[1:]
-        service_info = [line.split(None, 4)[:4] for line in lines]
-        display_service_status(service_info)
-    except subprocess.CalledProcessError as e:
-        return [["Ошибка при выполнении команды systemctl:", str(e)]]
 
-def display_service_status(service_status):
-    service_status_str = str(service_status)
-    service_status_list = ast.literal_eval(service_status_str)
-    headers = ["UNIT", "LOAD", "ACTIVE", "SUB"]
-    print(tabulate(service_status_list, headers=headers, tablefmt="fancy_grid"))
+class ServiceService(BaseService):
+    def __init__(self):
+        super().__init__("Services")
 
-if __name__ == "__main__":
-    service_status = get_service_status()
+    def get_status(self):
+        try:
+            result = subprocess.run(['systemctl', 'list-units', '--no-legend', '--type=service', '--state=running'],
+                                    capture_output=True,
+                                    text=True, check=True)
+            output = result.stdout
+            if not output.strip():
+                return [["Нет запущенных сервисов."]]
+            lines = output.strip().split('\n')[1:]
+            service_info = [line.split(None, 4)[:4] for line in lines]
+            return service_info
+        except subprocess.CalledProcessError as e:
+            return [["Ошибка при выполнении команды systemctl:", str(e)]]
+
+
+class SpecialServiceService(SpecialService):
+    def __init__(self, name):
+        super().__init__(name)
+
+    def get_special_status(self):
+        try:
+            result = subprocess.run(['systemctl', 'status', self.name], capture_output=True, text=True, check=True)
+            return result.stdout
+        except subprocess.CalledProcessError as e:
+            return f"Ошибка при выполнении команды systemctl: {e}"
